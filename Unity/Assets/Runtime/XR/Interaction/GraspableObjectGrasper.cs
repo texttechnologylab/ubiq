@@ -28,7 +28,7 @@ namespace Ubiq.XR
                 {
                     // parent because physical bodies consist of a rigid body, and colliders *below* it in the scene graph
                     grasped = contacted.gameObject.GetComponentsInParent<MonoBehaviour>().Where(mb => mb is IGraspable).FirstOrDefault() as IGraspable;
-                    grasped.Grasp(controller);
+                    grasped.Grasp(controller, contacted);
                 }
             }
             else

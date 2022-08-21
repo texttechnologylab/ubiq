@@ -31,7 +31,7 @@ namespace Ubiq.Samples
             body = GetComponent<Rigidbody>();
         }
 
-        public void Grasp(Hand controller)
+        public void Grasp(Hand controller, Collider collider)
         {
             follow = controller;
         }

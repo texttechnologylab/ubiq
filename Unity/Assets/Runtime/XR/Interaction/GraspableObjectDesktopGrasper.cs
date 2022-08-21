@@ -73,7 +73,7 @@ namespace Ubiq.XR
                         {
                             hand.MoveTo(hit.point);
                             previousProjectedHeight = GetProjectedHeight(hit.point);
-                            grasped.Grasp(hand);
+                            grasped.Grasp(hand, hit.collider);
                         }
                     }
                 }

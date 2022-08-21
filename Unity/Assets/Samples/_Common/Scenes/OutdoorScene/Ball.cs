@@ -15,14 +15,24 @@ namespace Ubiq.Samples
     [RequireComponent(typeof(Rigidbody))]
     public class Ball : NetworkBehaviour, IGraspable
     {
-        private Hand follow;
-        private Rigidbody body;
+        private static int VELOCITY_LENGTH = 5;
+        private Vector3[] releaseVelocities = new Vector3[VELOCITY_LENGTH];
 
-        private Vector3 releaseVelocity;
+        private int updateCount = 0;
+
+        private Hand hand;
+
+        private Rigidbody body;
 
         public Transform mapPlane;
 
         private Vector3 orginalPos;
+
+        private Vector3 localGrabPoint;
+
+        private Quaternion localGrabRotation;
+
+        private Vector3 centerOfMass;
 
         public bool owner;
 
@@ -65,9 +75,13 @@ namespace Ubiq.Samples
             owner = false;
         }
 
-        public void Grasp(Hand controller)
+        public void Grasp(Hand controller, Collider collider)
         {
-            follow = controller;
+            hand = controller;
+            Transform handTransform = hand.transform;
+            localGrabPoint = handTransform.InverseTransformPoint(transform.position);
+            localGrabRotation = Quaternion.Inverse(handTransform.rotation) * transform.rotation;
+
             body.isKinematic = true;
             owner = true;
             SendJson(new Message(MessageType.Grab, false, transform, true));
@@ -75,38 +89,48 @@ namespace Ubiq.Samples
 
         public void Release(Hand controller)
         {
-            if (controller == follow)
+            if (controller == hand)
             {
                 body.isKinematic = false;
                 released = true;
-                follow = null;
+                hand = null;
                 SendJson(new Message(MessageType.Grab, true, transform, true));
             }
         }
 
         private void Update()
         {
-            if (follow)
-            {
-                releaseVelocity = (follow.transform.position - transform.position) / Time.fixedDeltaTime;
-                transform.position = follow.transform.position;
-                transform.rotation = follow.transform.rotation;
-            }
-            if (released)
-            {
-                body.AddForce(releaseVelocity, ForceMode.Impulse);
-                released = false;
-            }
+
+
             if (mapPlane && mapPlane.position.y > transform.position.y)
             {
                 transform.position = orginalPos;
             }
         }
 
-        private void LateUpdate()
+        private void FixedUpdate()
         {
+            if (hand)
+            {
+                var prevPosition = transform.position;
+                transform.rotation = hand.transform.rotation * localGrabRotation;
+                transform.position = hand.transform.TransformPoint(localGrabPoint);
+                releaseVelocities[updateCount % VELOCITY_LENGTH] = (transform.position - prevPosition) / Time.fixedDeltaTime;
+                updateCount++;
+            }
+            if (released)
+            {
+                Vector3 releaseVelocity = new Vector3(
+                releaseVelocities.Average(x => x.x),
+                releaseVelocities.Average(x => x.y),
+                releaseVelocities.Average(x => x.z));
+
+                body.AddForce(releaseVelocity, ForceMode.Impulse);
+                released = false;
+            }
             if (owner)
                 SendJson(new Message(MessageType.Physics, false, transform, body.isKinematic));
+
         }
 
         protected override void ProcessMessage(ReferenceCountedSceneGraphMessage message)
@@ -122,7 +146,7 @@ namespace Ubiq.Samples
             else if (msg.type == MessageType.Grab)
             {
                 owner = false;
-                follow = null;
+                hand = null;
                 body.isKinematic = !msg.released;
             }
 

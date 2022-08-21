@@ -12,7 +12,7 @@ namespace Ubiq.Samples
         private Quaternion grabHandRotation;
         private Transform follow;
 
-        public void Grasp(Hand controller)
+        public void Grasp(Hand controller, Collider collider)
         {
             var handTransform = controller.transform;
             localGrabPoint = handTransform.InverseTransformPoint(transform.position); //transform.InverseTransformPoint(handTransform.position);

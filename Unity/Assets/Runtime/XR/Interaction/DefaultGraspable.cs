@@ -9,7 +9,7 @@ namespace Ubiq.XR
     // This default class is needed because the default behaviour is just to get picked up and moved around without further scripting
     public class DefaultGraspable : MonoBehaviour, IGraspable
     {
-        public void Grasp(Hand proxy)
+        public void Grasp(Hand proxy, Collider collider)
         { }
 
         public void Release(Hand proxy)
