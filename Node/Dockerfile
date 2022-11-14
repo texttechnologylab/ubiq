@@ -1,12 +1,8 @@
 FROM node:14.17
 
-COPY package.json ./
-
-COPY ubiq ./
+COPY . .
 
 RUN npm install
-
-COPY . . 
 
 EXPOSE 8009
 
