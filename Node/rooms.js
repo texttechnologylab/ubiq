@@ -45,7 +45,7 @@ class PropertyDictionary{
             if (value === ""){
                 // Attempting to remove
                 if (dict.hasOwnProperty(key)){
-                    delete dict.key;
+                    delete dict[key];
                     return true;
                 }
 
@@ -207,8 +207,10 @@ class RoomServer extends EventEmitter{
     }
 
     addServer(server){
-        console.log("Added RoomServer port " + server.port);
-        server.onConnection.push(this.onConnection.bind(this));
+        if(server.status == "LISTENING"){
+            console.log("Added RoomServer port " + server.port);
+            server.onConnection.push(this.onConnection.bind(this));
+        }
     }
 
     onConnection(wrapped){
