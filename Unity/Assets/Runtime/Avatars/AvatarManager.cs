@@ -7,7 +7,7 @@ using Ubiq.Spawning;
 using Ubiq.Voip;
 using UnityEngine;
 using UnityEngine.Events;
-
+using System.Linq;
 namespace Ubiq.Avatars
 {
     /// <summary>
@@ -96,7 +96,10 @@ namespace Ubiq.Avatars
         {
             var avatar = gameObject.GetComponentInChildren<Avatar>();
             avatar.SetPeer(peer);
-            playerAvatars.Add(peer, avatar);
+            if (playerAvatars.ContainsKey(peer))
+                playerAvatars[peer] = avatar;
+            else
+                playerAvatars.Add(peer, avatar);
 
             if (peer == RoomClient.Me)
             {
@@ -131,7 +134,7 @@ namespace Ubiq.Avatars
             playerAvatars.Remove(avatar.Peer);
         }
 
-        private void UpdateLocalAvatar()
+        public void UpdateLocalAvatar()
         {
             // If we have an existing instance, but it is the wrong prefab, destroy it so we can start again
             if (spawnedPrefab && spawnedPrefab != avatarPrefab)
@@ -148,7 +151,6 @@ namespace Ubiq.Avatars
             {
                 return;
             }
-
             // Create an instance of the correct prefab for this avatar
             if (!spawnedPrefab)
             {
@@ -157,6 +159,7 @@ namespace Ubiq.Avatars
                 spawnedPrefab = avatarPrefab;
             }
         }
+
 
         private void OnPeerUpdated(IPeer peer)
         {
