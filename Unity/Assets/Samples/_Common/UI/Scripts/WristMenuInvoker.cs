@@ -13,14 +13,6 @@ namespace Ubiq.Samples
 {
     public class WristMenuInvoker : MonoBehaviour, IUseable
     {
-        private void Start()
-        {
-            var avatar = GetComponentInParent<Ubiq.Avatars.Avatar>();
-            if (!avatar || !avatar.IsLocal)
-            {
-                gameObject.SetActive(false);
-            }
-        }
 
         public void Use(Hand controller)
         {
