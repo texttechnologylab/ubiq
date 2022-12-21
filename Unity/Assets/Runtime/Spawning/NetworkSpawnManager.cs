@@ -384,10 +384,13 @@ namespace Ubiq.Spawning
 
         private void OnDestroy()
         {
-            spawner.OnSpawned -= Spawner_OnSpawned;
-            spawner.OnDespawned -= Spawner_OnDespawned;
-            spawner.Dispose();
-            spawner = null;
+            if (spawner != null)
+            {
+                spawner.OnSpawned -= Spawner_OnSpawned;
+                spawner.OnDespawned -= Spawner_OnDespawned;
+                spawner.Dispose();
+                spawner = null;
+            }
         }
 
         /// <summary>

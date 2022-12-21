@@ -84,11 +84,13 @@ namespace Ubiq.Avatars
         private void OnDestroy()
         {
             RoomClient.OnPeerUpdated.RemoveListener(OnPeerUpdated);
-
-            spawner.OnSpawned -= OnSpawned;
-            spawner.OnDespawned -= OnDespawned;
-            spawner.Dispose();
-            spawner = null;
+            if (spawner != null)
+            {
+                spawner.OnSpawned -= OnSpawned;
+                spawner.OnDespawned -= OnDespawned;
+                spawner.Dispose();
+                spawner = null;
+            }
         }
 
         private void OnSpawned(GameObject gameObject, IRoom room,
