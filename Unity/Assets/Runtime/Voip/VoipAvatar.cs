@@ -43,6 +43,8 @@ namespace Ubiq.Avatars
                 {
                     var voipOutput = sink as VoipAudioSourceOutput;
                     voipOutput.unityAudioSource.spatialBlend = 1.0f;
+                    voipOutput.unityAudioSource.maxDistance = 50;
+                    voipOutput.unityAudioSource.minDistance = 8;
                     sinkTransform = voipOutput.transform;
                 }
             }
