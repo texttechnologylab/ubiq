@@ -2,9 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using System;
 
 namespace Ubiq.XR
 {
+
+    public delegate void OnGrasp(Hand controller, MonoBehaviour go);
+    public delegate void OnRelease(Hand controller, MonoBehaviour go);
+
     /// <summary>
     /// This interacts with Components that implement IGraspable, when its trigger collider enters their collider.
     /// </summary>
@@ -14,7 +19,8 @@ namespace Ubiq.XR
 
         private Collider contacted;
         private IGraspable grasped;
-
+        public static OnGrasp onGrasp = delegate {};
+        public static OnRelease onRelease = delegate {};
         private void Start()
         {
             controller.GripPress.AddListener(Grasp);
@@ -29,6 +35,8 @@ namespace Ubiq.XR
                     // parent because physical bodies consist of a rigid body, and colliders *below* it in the scene graph
                     grasped = contacted.gameObject.GetComponentsInParent<MonoBehaviour>().Where(mb => mb is IGraspable).FirstOrDefault() as IGraspable;
                     grasped.Grasp(controller);
+                    onGrasp.Invoke(controller, grasped as MonoBehaviour);
+                    
                 }
             }
             else
@@ -36,6 +44,7 @@ namespace Ubiq.XR
                 if (grasped != null)
                 {
                     grasped.Release(controller);
+                    onRelease.Invoke(controller, grasped as MonoBehaviour);
                     grasped = null;
                 }
             }

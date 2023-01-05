@@ -56,6 +56,7 @@ namespace Ubiq.XR
             if (Input.GetMouseButtonDown(mouseButton) && grasped != null)
             {
                 grasped.Release(hand);
+                GraspableObjectGrasper.onRelease.Invoke(hand, grasped as MonoBehaviour);
                 grasped = null;
                 transform.localPosition = startingPosition;
             }
@@ -74,6 +75,7 @@ namespace Ubiq.XR
                             hand.MoveTo(hit.point);
                             previousProjectedHeight = GetProjectedHeight(hit.point);
                             grasped.Grasp(hand);
+                            GraspableObjectGrasper.onGrasp.Invoke(hand, grasped as MonoBehaviour);
                         }
                     }
                 }
