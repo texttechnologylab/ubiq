@@ -115,8 +115,12 @@ namespace Ubiq.XR
                         teleportLocationValid = true;
                         break;
                     }
+                    else {
+                        teleportLocationValid = false;
+                        renderer.sharedMaterial.color = collisionColour;
+                        break;
+                    }
 
-                    renderer.sharedMaterial.color = collisionColour;
                 }
             }
 
