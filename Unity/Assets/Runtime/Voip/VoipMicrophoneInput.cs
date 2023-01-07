@@ -16,11 +16,14 @@ namespace Ubiq.Voip
     // samples without encoding/sending. At the moment, mic is never switched
     // off. To complicate matters, C# event thread safety is an issue.
     // TODO What happens when the audio device is changed while listening?
+    public delegate void AudioPcmSampleDelegate(AudioSamplingRatesEnum samplingRate, float[] sample);
+
     public class VoipMicrophoneInput : MonoBehaviour, IAudioSource
     {
         // IAudioSource implementation starts
         // Thread safe and can be called before Awake() and after OnDestroy()
         public event EncodedSampleDelegate OnAudioSourceEncodedSample = delegate {};
+        public event AudioPcmSampleDelegate OnAudioPcmSample = delegate { };
         public event RawAudioSampleDelegate OnAudioSourceRawSample = delegate {};
         public event SourceErrorDelegate OnAudioSourceError = delegate {};
         public bool IsAudioSourcePaused() => isPaused;
@@ -208,15 +211,17 @@ namespace Ubiq.Voip
             {
                 // TODO pool buffers to avoid runtime GC
                 var pcmSamples = new short[microphoneListener.samples.Length];
+                var floatPcms = new float[microphoneListener.samples.Length];
                 for (int i = 0; i < microphoneListener.samples.Length; i++)
                 {
                     var floatSample = microphoneListener.samples[i];
-                    floatSample = Mathf.Clamp(floatSample*gain,-.999f,.999f);
+                    floatSample = Mathf.Clamp(floatSample * gain, -.999f, .999f);
+                    floatPcms[i] = floatSample;
                     pcmSamples[i] = (short)(floatSample * short.MaxValue);
                 }
-
                 var encoded = audioEncoder.Encode(pcmSamples);
-                OnAudioSourceEncodedSample.Invoke((uint)pcmSamples.Length,encoded);
+                OnAudioPcmSample.Invoke(AudioSamplingRatesEnum.Rate16KHz, floatPcms);
+                OnAudioSourceEncodedSample.Invoke((uint)pcmSamples.Length, encoded);
             }
         }
 
