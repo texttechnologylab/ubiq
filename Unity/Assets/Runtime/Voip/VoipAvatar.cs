@@ -14,6 +14,7 @@ namespace Ubiq.Avatars
         private Avatar avatar;
         private Transform sinkTransform;
         private VoipPeerConnectionManager peerConnectionManager;
+        public AudioRolloffMode rolloffMode = AudioRolloffMode.Logarithmic;
 
         private void Start()
         {
@@ -42,9 +43,11 @@ namespace Ubiq.Avatars
                 if(sink is VoipAudioSourceOutput)
                 {
                     var voipOutput = sink as VoipAudioSourceOutput;
+                    voipOutput.unityAudioSource.rolloffMode = rolloffMode;
+                    voipOutput.unityAudioSource.volume = 0.5f;
                     voipOutput.unityAudioSource.spatialBlend = 1.0f;
-                    voipOutput.unityAudioSource.maxDistance = 50;
-                    voipOutput.unityAudioSource.minDistance = 8;
+                    voipOutput.unityAudioSource.maxDistance = 6;
+                    voipOutput.unityAudioSource.minDistance = 2;
                     sinkTransform = voipOutput.transform;
                 }
             }
