@@ -26,7 +26,7 @@ namespace Ubiq.Avatars
         /// Whether the Avatar instance represents a local or remote player. This flag is nominal only; child components do not have to use it.
         /// </summary>
         [NonSerialized]
-        public bool IsLocal;
+        protected bool isLocal;
 
         /// <summary>
         /// The Peer that the Avatar represents. Not all Avatar instances necessarily represent live peers - Avatars may be created to implement
@@ -55,6 +55,8 @@ namespace Ubiq.Avatars
         public Vector3 Position { get; set; }
         public Vector3 Velocity { get; set; }
         public Quaternion Rotation { get; set; }
+
+        public virtual bool IsLocal { get => isLocal; set => isLocal = value; }
 
         /// <summary>
         /// A dummy PeerInterface for local properties.
