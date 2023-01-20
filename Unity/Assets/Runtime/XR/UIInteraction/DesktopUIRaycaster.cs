@@ -26,6 +26,7 @@ namespace Ubiq.XR
 
         private PointerEventData eventData;
         private List<RaycastResult> raycastResults;
+        
 
         private Camera mainCamera;
 
