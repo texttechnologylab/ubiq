@@ -44,10 +44,10 @@ namespace Ubiq.Avatars
                 {
                     var voipOutput = sink as VoipAudioSourceOutput;
                     voipOutput.unityAudioSource.rolloffMode = rolloffMode;
-                    voipOutput.unityAudioSource.volume = 0.5f;
+                    voipOutput.unityAudioSource.volume = 1.0f;
                     voipOutput.unityAudioSource.spatialBlend = 1.0f;
-                    voipOutput.unityAudioSource.maxDistance = 6;
-                    voipOutput.unityAudioSource.minDistance = 2;
+                    voipOutput.unityAudioSource.maxDistance = 10;
+                    voipOutput.unityAudioSource.minDistance = 4;
                     sinkTransform = voipOutput.transform;
                 }
             }
