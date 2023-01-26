@@ -27,6 +27,7 @@ namespace Ubiq.XR
         private PointerEventData eventData;
         private List<RaycastResult> raycastResults;
         private HandController controller;
+        public static UnityAction<GameObject> buttonClicks = delegate { };
 
         private void Awake()
         {
@@ -139,6 +140,10 @@ namespace Ubiq.XR
                 if (eventData.pointerPress == eventData.pointerEnter)
                 {
                     ExecuteEvents.ExecuteHierarchy(eventData.pointerEnter, eventData, ExecuteEvents.pointerClickHandler);
+                    if (eventData.pointerEnter.transform.parent.gameObject.TryGetComponent(out Button buttonClicked))
+                    {
+                        buttonClicks.Invoke(eventData.pointerEnter.transform.parent.gameObject);
+                    }
                 }
 
                 eventData.pointerPress = null;
