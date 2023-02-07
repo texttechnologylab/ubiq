@@ -106,7 +106,7 @@ namespace Ubiq.XR
 
                 numsegments++;
 
-                if (Physics.Linecast(positions[i-1], positions[i], out raycasthitinfo))
+                if (Physics.Linecast(positions[i-1], positions[i], out raycasthitinfo, ~LayerMask.GetMask(new string[] {"NonTPCollide"})))
                 {
                     if (raycasthitinfo.collider.CompareTag("Teleport"))
                     {
