@@ -78,6 +78,7 @@ namespace Ubiq.Samples.Social
             if (PrepareCamera(config))
             {
                 Render(config);
+                mirrorCamera.Render();
             }
         }
 
@@ -89,7 +90,7 @@ namespace Ubiq.Samples.Social
                 case RenderMode.AvatarOnly: RenderAvatar(config); break;
                 case RenderMode.Layers: RenderLayers(config); break;
             }
-            mirrorCamera.Render();
+            
         }
 
         private bool TryGetAvatarManager(out AvatarManager avatarManager)
@@ -133,15 +134,12 @@ namespace Ubiq.Samples.Social
             mirrorCamera.RemoveAllCommandBuffers();
             mirrorCamera.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, avatarRenderCommandBufferTmp);
             mirrorCamera.cullingMask = 0;
-            
-            //mirrorCamera.Render();
         }
 
         private void RenderLayers(Config config)
         {
             mirrorCamera.RemoveAllCommandBuffers();
             mirrorCamera.cullingMask = config.layers;
-            //mirrorCamera.Render();
         }
 
         private bool PrepareCamera(Config config)
@@ -234,8 +232,7 @@ namespace Ubiq.Samples.Social
             if (!renderTexture && width > 0 && height > 0)
             {
                 renderTexture = RenderTexture.GetTemporary(width,height,0);
-                renderTexture.depth = 16;
-                //renderTexture.fo
+                renderTexture.depth = 32;
             }
             return renderTexture;
         }
