@@ -211,6 +211,17 @@ namespace Ubiq.Spawning
             }
         }
 
+        public void ForceDespawnAll()
+        {
+            if (spawnedForPeers.TryGetValue(roomClient.Me, out var spawned))
+            {
+                foreach (var go in spawned.Values.ToList())
+                {
+                    Despawn(go);
+                }
+            }
+        }
+
         public void Despawn(GameObject gameObject)
         {
             string key = null;
@@ -263,7 +274,7 @@ namespace Ubiq.Spawning
         /// </summary>
         public GameObject SpawnWithPeerScope(GameObject gameObject)
         {
-            var key = $"{ propertyPrefix }{ NetworkId.Unique() }"; // Uniquely id the whole object
+            var key = $"{propertyPrefix}{NetworkId.Unique()}"; // Uniquely id the whole object
             var catalogueIdx = ResolveIndex(gameObject);
 
             var go = InstantiateAndSetIds(key, catalogueIdx, local: true);
@@ -293,7 +304,7 @@ namespace Ubiq.Spawning
         /// </summary>
         public void SpawnWithRoomScope(GameObject gameObject)
         {
-            var key = $"{ propertyPrefix }{ NetworkId.Unique() }"; // Uniquely id the whole object
+            var key = $"{propertyPrefix}{NetworkId.Unique()}"; // Uniquely id the whole object
             var catalogueIdx = ResolveIndex(gameObject);
             roomClient.Room[key] = JsonUtility.ToJson(new Message()
             {
@@ -426,7 +437,12 @@ namespace Ubiq.Spawning
             }
         }
 
-        public void Despawn (GameObject gameObject)
+        public void ForceDespawnAll()
+        {
+            spawner.ForceDespawnAll();
+        }
+
+        public void Despawn(GameObject gameObject)
         {
             if (spawner != null)
             {
