@@ -435,6 +435,19 @@ class RoomPeer{
                         });
                     }
                     break;
+                case "DisconnectAll":
+                    if (Schema.validate(message.args,  "/ubiq.rooms.disconnectallargs", this.onValidationFailure))
+                    {
+                        
+                        const room = this.server.roomDatabase.byUuid[this.room.uuid];
+                        if (room === undefined)
+                            break;
+                        console.log(`${this.uuid} called to disconnect all clients from the room`);
+                        for (const peer of room.peers) {
+                            room.removePeer(peer);
+                        }
+                    }
+                    break;
                 case "SetBlob":
                     if (Schema.validate(message.args, "/ubiq.rooms.setblobargs", this.onValidationFailure)) {
                         this.server.setBlob(message.args.uuid,message.args.blob);
@@ -822,6 +835,15 @@ Schema.add({
     properties: {
         clientid: { $ref: "/ubiq.messaging.networkid"}, // required because this needs a response
         joincode: {type: "string"}
+    },
+    required: ["clientid"]
+});
+
+Schema.add({
+    id: "/ubiq.rooms.disconnectallargs",
+    type: "object",
+    properties: {
+        clientid: { $ref: "/ubiq.messaging.networkid"}, // required so we can keep track of who innitiated the call
     },
     required: ["clientid"]
 });
