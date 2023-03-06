@@ -438,7 +438,6 @@ class RoomPeer{
                 case "DisconnectAll":
                     if (Schema.validate(message.args,  "/ubiq.rooms.disconnectallargs", this.onValidationFailure))
                     {
-                        
                         const room = this.server.roomDatabase.byUuid[this.room.uuid];
                         if (room === undefined)
                             break;
@@ -641,6 +640,7 @@ class EmptyRoom{
             uuid: "",
             joincode: "",
             publish: false,
+            peerAmount: 0,
             name: "",
             keys: [],
             values: []
@@ -728,6 +728,7 @@ class Room{
             joincode: this.joincode,
             publish: this.publish,
             name: this.name,
+            peerAmount: this.peers.length,
             keys: this.properties.keys(),
             values: this.properties.values()
         };
