@@ -90,6 +90,12 @@ namespace Ubiq.Rooms
         }
 
         [Serializable]
+        public class DeleteRoomRequest
+        {
+            public NetworkId clientid;
+        }
+
+        [Serializable]
         private struct PingArgs
         {
             public NetworkId clientid;
@@ -737,7 +743,7 @@ namespace Ubiq.Rooms
 
             }
         }
-
+        
         /// <summary>
         /// Sets a persistent variable that exists for as long as the room does. This variable is not sent with
         /// Room Updates, but rather only when requested, making this method suitable for larger data.
@@ -748,6 +754,14 @@ namespace Ubiq.Rooms
             var uuid = Guid.NewGuid().ToString();
             SetBlob(room, uuid, blob);
             return uuid;
+        }
+
+        public void DeleteRoom()
+        {
+            SendToServerSync("DisconnectAll", new DeleteRoomRequest()
+            {
+                clientid = objectid,
+            });
         }
 
         public void Ping()
