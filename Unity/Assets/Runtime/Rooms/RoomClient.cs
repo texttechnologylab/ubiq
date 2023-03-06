@@ -39,6 +39,7 @@ namespace Ubiq.Rooms
             public string joincode;
             public bool publish;
             public string name;
+            public int peerAmount;
             public List<string> keys = new List<string>();
             public List<string> values = new List<string>();
         }
@@ -317,6 +318,7 @@ namespace Ubiq.Rooms
         {
             public string Name { get; protected set; }
             public string UUID { get; protected set; }
+            public int PeerAmount { get; protected set; }
             public string JoinCode { get; protected set; }
             public bool Publish { get; protected set; }
             public string this[string key]
@@ -339,6 +341,7 @@ namespace Ubiq.Rooms
             {
                 Name = info.name;
                 UUID = info.uuid;
+                PeerAmount = info.peerAmount;
                 JoinCode = info.joincode;
                 Publish = info.publish;
                 properties.Set(info.keys,info.values);

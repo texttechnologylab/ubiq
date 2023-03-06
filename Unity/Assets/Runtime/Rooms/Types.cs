@@ -209,6 +209,7 @@ namespace Ubiq.Rooms
         string Name { get; }
         string UUID { get; }
         string JoinCode { get; }
+        int PeerAmount { get; }
         bool Publish { get; }
         string this[string key] { get; set; }
     }
