@@ -3,7 +3,7 @@
     "version": "0.4.1",
     "displayName": "Ubiq",
     "description": "Create networked VR experiences with Ubiq",
-    "unity": "2020.3",
+    "unity": "2021.3",
     "dependencies": {
       "com.unity.xr.management": "3.2.16"
    },
