@@ -1,0 +1,5 @@
+
+/Web/**/*.meta
+/Node/**/*.meta
+/Documentation/**/*.meta
+*.meta
