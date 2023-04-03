@@ -12,6 +12,9 @@ namespace Ubiq.Avatars
         [SerializeField] private Transform leftHand;
         [SerializeField] private Transform rightHand;
 
+
+        [SerializeField] private string avatarPositionNode = "AvatarPosition";
+        [SerializeField] private string avatarRotationNode = "AvatarRotation";
         [SerializeField] private string headPositionNode = "HeadPosition";
         [SerializeField] private string headRotationNode = "HeadRotation";
         [SerializeField] private string leftHandPositionNode = "LeftHandPosition";
@@ -21,6 +24,7 @@ namespace Ubiq.Avatars
 
         private void Start()
         {
+            SetTransformProvider(avatarPositionNode, avatarRotationNode, transform);
             SetTransformProvider(headPositionNode,headRotationNode,head);
             SetTransformProvider(leftHandPositionNode,leftHandRotationNode,leftHand);
             SetTransformProvider(rightHandPositionNode,rightHandRotationNode,rightHand);

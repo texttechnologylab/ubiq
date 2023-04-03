@@ -8,6 +8,8 @@ namespace Ubiq.Avatars
     [RequireComponent(typeof(AvatarManager))]
     public class UbiqAvatarHintsHelper : MonoBehaviour
     {
+        [SerializeField] private string avatarPositionNode = "AvatarPosition";
+        [SerializeField] private string avatarRotationNode = "AvatarRotation";
         [SerializeField] private string headPositionNode = "HeadPosition";
         [SerializeField] private string headRotationNode = "HeadRotation";
         [SerializeField] private string leftHandPositionNode = "LeftHandPosition";
@@ -35,8 +37,11 @@ namespace Ubiq.Avatars
             }
 
             var pc = pcs[0];
+            SetTransformProvider(avatarPositionNode, avatarRotationNode, pc.transform); 
+            //SetTransformProvider(avatarPositionNode, avatarRotationNode, pc.GetComponentInChildren<Camera>()?.transform);
             SetTransformProvider(headPositionNode,headRotationNode,
                 pc.GetComponentInChildren<Camera>()?.transform);
+
 
             var hcs = pc.GetComponentsInChildren<HandController>();
 

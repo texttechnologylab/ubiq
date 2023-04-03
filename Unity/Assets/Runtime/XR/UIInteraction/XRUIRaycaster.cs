@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.Events;
+using static UnityEngine.UI.Image;
 
 namespace Ubiq.XR
 {
@@ -51,7 +52,9 @@ namespace Ubiq.XR
         private void PerformRaycast()
         {
             // Generate a new ray at our input object facing forward
-            var ray = new Ray(transform.position, transform.forward);
+            var Rotation = transform.rotation;
+            var Forward = Rotation * Vector3.forward;
+            var ray = new Ray(transform.position, Forward);
 
             // Check if there is a 3d object between us and the canvas.
             var distance = float.PositiveInfinity;

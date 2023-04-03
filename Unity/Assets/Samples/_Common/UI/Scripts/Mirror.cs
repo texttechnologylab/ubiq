@@ -90,6 +90,7 @@ namespace Ubiq.Samples.Social
                 case RenderMode.AvatarOnly: RenderAvatar(config); break;
                 case RenderMode.Layers: RenderLayers(config); break;
             }
+            
         }
 
         private bool TryGetAvatarManager(out AvatarManager avatarManager)
@@ -108,6 +109,7 @@ namespace Ubiq.Samples.Social
 
         private void RenderAvatar(Config config)
         {
+            
             if (!avatarManager && !TryGetAvatarManager(out avatarManager))
             {
                 return;
@@ -130,21 +132,19 @@ namespace Ubiq.Samples.Social
             }
 
             mirrorCamera.RemoveAllCommandBuffers();
-            mirrorCamera.AddCommandBuffer(CameraEvent.BeforeForwardOpaque,
-                avatarRenderCommandBufferTmp);
+            mirrorCamera.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, avatarRenderCommandBufferTmp);
             mirrorCamera.cullingMask = 0;
-            mirrorCamera.Render();
         }
 
         private void RenderLayers(Config config)
         {
             mirrorCamera.RemoveAllCommandBuffers();
             mirrorCamera.cullingMask = config.layers;
-            mirrorCamera.Render();
         }
 
         private bool PrepareCamera(Config config)
         {
+            
             var camera = Camera.main;
 
             if (!camera)
@@ -159,7 +159,7 @@ namespace Ubiq.Samples.Social
             var mirrorForward = Vector3.Dot(mirror.forward,observerToMirror) < 0
                 ? mirror.forward
                 : -mirror.forward;
-
+            
             // Point camera s.t. its forward direction is the reflected
             // direction after hitting the mirror plane
             var mirrorCameraForward = observerToMirror -
@@ -171,9 +171,8 @@ namespace Ubiq.Samples.Social
             }
 
             // Position camera same distance from mirror as observer
-            mirrorCamera.transform.position = mirror.position -
-                mirrorCameraForward * observerToMirror.magnitude;
-
+            mirrorCamera.transform.position = mirror.position - mirrorCameraForward * observerToMirror.magnitude;
+            
             // Shape frustrum s.t. it fits the four corners of the mirror
             image.rectTransform.GetWorldCorners(cornersTmp);
             var worldWidth = (cornersTmp[3] - cornersTmp[0]).magnitude;
@@ -181,11 +180,12 @@ namespace Ubiq.Samples.Social
             var w = worldWidth;
             var h = worldHeight;
             var d = observerToMirror.magnitude;
+            
             mirrorCamera.stereoTargetEye = StereoTargetEyeMask.None;
             mirrorCamera.aspect = w/h;
             mirrorCamera.fieldOfView = 2 * Mathf.Atan2(h,2*d) * Mathf.Rad2Deg;
             mirrorCamera.nearClipPlane = d * 0.5f;
-
+            
             // Check resolution of texture
             var scaler = image.canvas.GetComponent<CanvasScaler>();
             if (!scaler)
@@ -193,11 +193,11 @@ namespace Ubiq.Samples.Social
                 return false;
             }
             var scale = scaler.dynamicPixelsPerUnit * config.resolutionMultiplier;
-
+            
             var texWidth = Mathf.RoundToInt(image.rectTransform.rect.width * scale);
             var texHeight = Mathf.RoundToInt(image.rectTransform.rect.height * scale);
             var rt = RequireTex(texWidth,texHeight);
-
+            
             if (rt)
             {
                 mirrorCamera.targetTexture = rt;
@@ -232,6 +232,7 @@ namespace Ubiq.Samples.Social
             if (!renderTexture && width > 0 && height > 0)
             {
                 renderTexture = RenderTexture.GetTemporary(width,height,0);
+                renderTexture.depth = 32;
             }
             return renderTexture;
         }
