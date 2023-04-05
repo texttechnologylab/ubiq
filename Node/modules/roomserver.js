@@ -363,7 +363,7 @@ class RoomServer extends EventEmitter{
 
     removeRoom(room){
         this.emit("destroy", room);
-
+        this.roomDatabase.remove(room.uuid);
         postRoomUpdate(room.uuid, "closed", room.name);
 
         console.log("RoomServer: Deleting empty room " + room.uuid);
