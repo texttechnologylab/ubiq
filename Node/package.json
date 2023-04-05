@@ -11,6 +11,7 @@
     "https": "^1.0.0",
     "jsonschema": "^1.4.1",
     "nconf": "^0.12.0",
+    "node-fetch": "^2.6.9",
     "ubiq": "file:ubiq",
     "wrtc": "^0.4.7"
   }

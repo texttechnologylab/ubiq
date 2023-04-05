@@ -1,6 +1,7 @@
 const { Message, NetworkId, Schema, Uuid } = require("ubiq");
 const { EventEmitter } = require('events');
 const fs = require('fs');
+const fetch = require('node-fetch');
 
 const VERSION_STRING = "0.0.4";
 const RoomServerReservedId = 1;
@@ -22,6 +23,28 @@ function arrayRemove(array,element){
     if (index > -1) {
         array.splice(index, 1);
     }
+}
+
+function postRoomUpdate(roomId, status, name) {
+    // Notify database that the room has been closed
+    const data = {
+        szeneId: name,
+        localTime: Math.floor(new Date().getTime() / 1000),
+        clientId: "server",
+        type: status,
+        roomId: roomId,
+        mode: 'RoomStatus'
+    };
+
+    fetch("http://audio.vasililab.texttechnologylab.org/special", {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+    }).then(response => response.status != 201 ? console.warn(`Got response code ${response.status} from api server`) : undefined)
+        .catch(err => console.error(err));
 }
 
 class PropertyDictionary{
@@ -127,6 +150,8 @@ class RoomDatabase{
     add(room){
         this.byUuid[room.uuid] = room;
         this.byJoincode[room.joincode] = room;
+        if (room.name !== 'LEFT_ROOM')
+            postRoomUpdate(room.uuid, "created", room.name);
     }
 
     // Remove room from the database by uuid
@@ -337,8 +362,10 @@ class RoomServer extends EventEmitter{
     }
 
     removeRoom(room){
-        this.emit("destroy",room);
-        this.roomDatabase.remove(room.uuid);
+        this.emit("destroy", room);
+
+        postRoomUpdate(room.uuid, "closed", room.name);
+
         console.log("RoomServer: Deleting empty room " + room.uuid);
     }
 
