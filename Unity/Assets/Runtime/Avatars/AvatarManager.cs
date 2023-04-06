@@ -121,6 +121,7 @@ namespace Ubiq.Avatars
             else
             {
                 // Remote setup
+                avatar.IsLocal = false;
                 avatar.gameObject.name = $"Remote Avatar #{ peer.uuid }";
             }
 
