@@ -153,7 +153,7 @@ namespace Ubiq.XR
             JoystickSwipe.Update(Joystick.x);
         }
 
-        public bool Left
+        public virtual bool Left
         {
             get
             {
@@ -161,7 +161,7 @@ namespace Ubiq.XR
             }
         }
 
-        public bool Right
+        public virtual bool Right
         {
             get
             {
