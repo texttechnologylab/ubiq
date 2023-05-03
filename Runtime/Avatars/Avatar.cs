@@ -7,6 +7,7 @@ using UnityEngine.Events;
 using Ubiq.Rooms;
 using Ubiq.Dictionaries;
 using Ubiq.Spawning;
+using UnityEngine.SocialPlatforms;
 
 namespace Ubiq.Avatars
 {
@@ -26,8 +27,8 @@ namespace Ubiq.Avatars
         /// Whether the Avatar instance represents a local or remote player. This flag is nominal only; child components do not have to use it.
         /// </summary>
         [NonSerialized]
-        public bool IsLocal;
-
+        protected bool isLocal;
+        public virtual bool IsLocal { get => isLocal; set => isLocal = value; }
         /// <summary>
         /// The Peer that the Avatar represents. Not all Avatar instances necessarily represent live peers - Avatars may be created to implement
         /// customisation interfaces, NPCs & crowds, or playback, for example.
