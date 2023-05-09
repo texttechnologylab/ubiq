@@ -7,11 +7,11 @@ namespace Ubiq.XR
 {
     public class DistanceObjectUser : MonoBehaviour
     {
-        //TODO!!!
+        //TODO delegates for handyness
         //public delegate void OnDistanceUse(Hand controller, MonoBehaviour go);
         //public delegate void OnDistanceLink(Hand controller, MonoBehaviour go);
 
-        private HandController controller;
+        public HandController controller;
 
         private IDistanceUseable used;
 
@@ -54,6 +54,10 @@ namespace Ubiq.XR
                 Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
             {
                 distance = rayHit.distance;
+            }
+            else
+            {
+                return null;
             }
 
             IDistanceUseable used_hit = rayHit.collider.gameObject.GetComponentsInParent<MonoBehaviour>().Where(mb => mb is IDistanceUseable).FirstOrDefault() as IDistanceUseable;
