@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditorInternal;
 using System;
 using System.Linq;
+using Ubiq.Networking;
 
 namespace Ubiq.Rooms
 {
@@ -17,6 +18,7 @@ namespace Ubiq.Rooms
         private List<IRoom> available = new List<IRoom>();
         private double nextRoomRefreshTime = -1;
         private const double ROOM_REFRESH_INTERVAL = 2d;
+        private bool foldoutProperties;
 
         private void Awake()
         {
@@ -36,6 +38,15 @@ namespace Ubiq.Rooms
             managerReorderableList.drawElementCallback += DrawElementCallback;
             managerReorderableList.drawHeaderCallback += HeaderCallbackDelegate;
             managerReorderableList.elementHeightCallback += ElementHeightCallbackDelegate;
+            managerReorderableList.onAddCallback += AddCallbackDelegate;
+        }
+
+        void AddCallbackDelegate(ReorderableList list)
+        {
+            var definition = ScriptableObject.CreateInstance<ConnectionDefinition>(); // This will create a local definition which is saved/embedded in the scene.
+            definition.name = "Server Connection";
+            list.serializedProperty.InsertArrayElementAtIndex(0);
+            list.serializedProperty.GetArrayElementAtIndex(0).objectReferenceValue = definition;
         }
 
         bool CanAddCallbackDelegate(ReorderableList list)
@@ -55,14 +66,12 @@ namespace Ubiq.Rooms
                 return 0;
             }
             float propertyHeight = EditorGUI.GetPropertyHeight(serversProperty.GetArrayElementAtIndex(index), true);
-            float spacing = EditorGUIUtility.singleLineHeight / 2;
-            return propertyHeight + spacing;
+            return propertyHeight;
         }
 
         private void DrawElementCallback(Rect rect, int index, bool isactive, bool isfocused)
         {
-            rect.y += EditorGUIUtility.singleLineHeight / 4;
-            EditorGUI.PropertyField(rect, serversProperty.GetArrayElementAtIndex(index), new GUIContent(""), true);
+            EditorGUI.PropertyField(rect, serversProperty.GetArrayElementAtIndex(index), new GUIContent(""), false);
         }
 
         public override void OnInspectorGUI()
@@ -134,7 +143,19 @@ namespace Ubiq.Rooms
                 EditorGUILayout.LabelField($"Me {component.Me.uuid}");
             }
 
+            EditorGUILayout.EndFoldoutHeaderGroup();
+
             GUI.enabled = true;
+
+            foldoutProperties = EditorGUILayout.BeginFoldoutHeaderGroup(foldoutProperties, "Properties");
+
+            if (foldoutProperties)
+            {
+                foreach (var item in component.Me)
+                {
+                    EditorGUILayout.LabelField($"{item.Key}: {item.Value}");
+                }
+            }
 
             serializedObject.ApplyModifiedProperties();
         }

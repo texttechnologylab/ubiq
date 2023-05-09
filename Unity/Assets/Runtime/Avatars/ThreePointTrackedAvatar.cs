@@ -5,18 +5,43 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Events;
 using Ubiq.Messaging;
+using Ubiq.Spawning;
 
 namespace Ubiq.Avatars
 {
     [RequireComponent(typeof(Avatar))]
-    public class ThreePointTrackedAvatar : NetworkBehaviour
+    public class ThreePointTrackedAvatar : MonoBehaviour
     {
+        private struct PositionRotation
+        {
+            public Vector3 position;
+            public Quaternion rotation;
+
+            public static PositionRotation identity
+            {
+                get
+                {
+                    return new PositionRotation
+                    {
+                        position = Vector3.zero,
+                        rotation = Quaternion.identity
+                    };
+                }
+            }
+        }
+
         [Serializable]
         public class TransformUpdateEvent : UnityEvent<Vector3,Quaternion> { }
         public TransformUpdateEvent OnHeadUpdate;
         public TransformUpdateEvent OnLeftHandUpdate;
         public TransformUpdateEvent OnRightHandUpdate;
 
+        [Serializable]
+        public class GripUpdateEvent : UnityEvent<float> { }
+        public GripUpdateEvent OnLeftGripUpdate;
+        public GripUpdateEvent OnRightGripUpdate;
+
+        private NetworkContext context;
         private Transform networkSceneRoot;
         private State[] state = new State[1];
         private Avatar avatar;
@@ -25,20 +50,19 @@ namespace Ubiq.Avatars
         [Serializable]
         private struct State
         {
+            public PositionRotation head;
             public PositionRotation leftHand;
             public PositionRotation rightHand;
-            public PositionRotation head;
+            public float leftGrip;
+            public float rightGrip;
         }
 
-        private void Awake ()
+        protected void Start()
         {
             avatar = GetComponent<Avatar>();
-        }
-
-        protected override void Started ()
-        {
+            context = NetworkScene.Register(this, NetworkId.Create(avatar.NetworkId, "ThreePointTracked"));
+            networkSceneRoot = context.Scene.transform;
             lastTransmitTime = Time.time;
-            networkSceneRoot = networkScene.transform;
         }
 
         private void Update ()
@@ -46,9 +70,11 @@ namespace Ubiq.Avatars
             if(avatar.IsLocal)
             {
                 // Update state from hints
-                state[0].head = GetHintNode (AvatarHints.NodePosRot.Head);
-                state[0].leftHand = GetHintNode(AvatarHints.NodePosRot.LeftHand);
-                state[0].rightHand = GetHintNode(AvatarHints.NodePosRot.RightHand);
+                state[0].head = GetPosRotHint("HeadPosition","HeadRotation");
+                state[0].leftHand = GetPosRotHint("LeftHandPosition","LeftHandRotation");
+                state[0].rightHand = GetPosRotHint("RightHandPosition","RightHandRotation");
+                state[0].leftGrip = GetFloatHint("LeftGrip");
+                state[0].rightGrip = GetFloatHint("RightGrip");
 
                 // Send it through network
                 if ((Time.time - lastTransmitTime) > (1f / avatar.UpdateRate))
@@ -80,18 +106,37 @@ namespace Ubiq.Avatars
             return local;
         }
 
-        private PositionRotation GetHintNode (AvatarHints.NodePosRot node)
+        private PositionRotation GetPosRotHint (string position, string rotation)
         {
-            if (AvatarHints.TryGet(node, avatar, out PositionRotation nodePosRot))
+            if (avatar == null || avatar.hints == null)
             {
-                return new PositionRotation
-                {
-                    position = nodePosRot.position,
-                    rotation = nodePosRot.rotation
-                };
+                return PositionRotation.identity;
             }
 
-            return new PositionRotation();
+            var posrot = PositionRotation.identity;
+            if (avatar.hints.TryGetVector3(position, out var pos))
+            {
+                posrot.position = pos;
+            }
+            if (avatar.hints.TryGetQuaternion(rotation, out var rot))
+            {
+                posrot.rotation = rot;
+            }
+            return InverseTransformPosRot(posrot,networkSceneRoot);
+        }
+
+        private float GetFloatHint (string node)
+        {
+            if (avatar == null || avatar.hints == null)
+            {
+                return 0.0f;
+            }
+
+            if (avatar.hints.TryGetFloat(node, out var f))
+            {
+                return f;
+            }
+            return 0.0f;
         }
 
         private void Send()
@@ -103,15 +148,14 @@ namespace Ubiq.Avatars
             var message = ReferenceCountedSceneGraphMessage.Rent(transformBytes.Length);
             transformBytes.CopyTo(new Span<byte>(message.bytes, message.start, message.length));
 
-            networkScene.Send(networkId,message);
+            context.Send(message);
         }
 
-        protected override void ProcessMessage(ReferenceCountedSceneGraphMessage message)
+        public void ProcessMessage(ReferenceCountedSceneGraphMessage message)
         {
             MemoryMarshal.Cast<byte, State>(
                 new ReadOnlySpan<byte>(message.bytes, message.start, message.length))
                 .CopyTo(new Span<State>(state));
-
             OnRecv();
         }
 
@@ -122,10 +166,14 @@ namespace Ubiq.Avatars
             var head = TransformPosRot(state[0].head,networkSceneRoot);
             var leftHand = TransformPosRot(state[0].leftHand,networkSceneRoot);
             var rightHand = TransformPosRot(state[0].rightHand,networkSceneRoot);
+            var leftGrip = state[0].leftGrip;
+            var rightGrip = state[0].rightGrip;
 
             OnHeadUpdate.Invoke(head.position,head.rotation);
             OnLeftHandUpdate.Invoke(leftHand.position,leftHand.rotation);
             OnRightHandUpdate.Invoke(rightHand.position,rightHand.rotation);
+            OnLeftGripUpdate.Invoke(leftGrip);
+            OnRightGripUpdate.Invoke(rightGrip);
         }
     }
 }

@@ -5,100 +5,29 @@ using Ubiq.Rooms;
 using Ubiq.Messaging;
 using Ubiq.Logging;
 using Ubiq.Extensions;
-using UnityEngine.Events;
-using SIPSorcery.Net;
 using System.Threading.Tasks;
-using System.Collections.Concurrent;
+using Ubiq.Voip.Implementations;
 using SIPSorceryMedia.Abstractions;
-
 
 namespace Ubiq.Voip
 {
     /// <summary>
     /// Manages the lifetime of WebRtc Peer Connection objects with respect to changes in the room
     /// </summary>
-    public class VoipPeerConnectionManager : NetworkBehaviour
+    public class VoipPeerConnectionManager : MonoBehaviour
     {
-        // SipSorcery peer connections are slow to instantiate as cert
-        // generation seems to take a while. This at least allows that to happen
-        // on a separate thread.
-        private class RTCPeerConnectionSource
-        {
-            private List<RTCIceServer> iceServers = new List<RTCIceServer>();
-
-            public void ClearIceServers ()
-            {
-                iceServers.Clear();
-            }
-
-            public void AddIceServer (string uri, string username = "",
-                string pass = "")
-            {
-                if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(pass))
-                {
-                    iceServers.Add(new RTCIceServer {
-                        urls = uri
-                    });
-                }
-                else
-                {
-                    iceServers.Add(new RTCIceServer {
-                        urls = uri,
-                        username = username,
-                        credential = pass,
-                        credentialType = RTCIceCredentialType.password
-                    });
-                }
-            }
-
-            public Task<RTCPeerConnection> Acquire ()
-            {
-                return Task.Run(() => Create());
-            }
-
-            private RTCPeerConnection Create()
-            {
-                return new RTCPeerConnection(new RTCConfiguration
-                {
-                    iceServers = new List<RTCIceServer>(iceServers),
-                });
-            }
-        }
-
-        [Serializable]
-        private class IceServerDetails
-        {
-            public string uri;
-            public string username;
-            public string password;
-
-            public IceServerDetails(string uri, string username, string password)
-            {
-                this.uri = uri;
-                this.username = username;
-                this.password = password;
-            }
-        }
-
         [Serializable]
         private class IceServerDetailsCollection
         {
             public List<IceServerDetails> servers = new List<IceServerDetails>();
         }
 
-        private IAudioSource defaultAudioSource;
-        private IAudioSink defaultAudioSink;
-        private RoomClient client;
         private Dictionary<string, VoipPeerConnection> peerUuidToConnection = new Dictionary<string, VoipPeerConnection>();
 
-        private RTCPeerConnectionSource peerConnectionSource = new RTCPeerConnectionSource();
-
         private string prevIceServersString;
-        private IceServerDetailsCollection iceServers;
+        private IceServerDetailsCollection iceServers = new IceServerDetailsCollection();
 
-        public class OnPeerConnectionEvent : ExistingListEvent<VoipPeerConnection>
-        {
-        }
+        public class OnPeerConnectionEvent : ExistingListEvent<VoipPeerConnection> {}
 
         /// <summary>
         /// Fires when a new (local) PeerConnection is created by an instance of this Component. This may be a new or replacement PeerConnection.
@@ -110,41 +39,38 @@ namespace Ubiq.Voip
         /// </remarks>
         public OnPeerConnectionEvent OnPeerConnection = new OnPeerConnectionEvent();
 
+        private RoomClient client;
+        private NetworkId serviceId = new NetworkId("c994-0768-d7b7-171c"); // The unique service Id
         private LogEmitter logger;
+        private NetworkScene networkScene;
 
         private void Awake()
         {
             OnPeerConnection.SetExisting(peerUuidToConnection.Values);
-
-            defaultAudioSource = this.GetInterface<IAudioSource>();
-            if (defaultAudioSource == null)
-            {
-                defaultAudioSource = CreateAudioSource();
-            }
-            defaultAudioSource.StartAudio();
-
-            defaultAudioSink = this.GetInterface<IAudioSink>();
         }
 
-        protected override void Started()
+        protected void Start()
         {
-            logger = new NetworkEventLogger(networkId,networkScene,this);
-
+            networkScene = NetworkScene.Find(this);
+            var id = NetworkId.Create(networkScene.Id, serviceId);
+            NetworkScene.Register(this, id);
+            logger = new NetworkEventLogger(id, networkScene, this);
             client = GetComponentInParent<RoomClient>();
-            client.OnJoinedRoom.AddListener(OnJoinedRoom);
+            client.OnPeerAdded.AddListener(OnPeerAdded);
             client.OnPeerRemoved.AddListener(OnPeerRemoved);
+            client.OnJoinedRoom.AddListener(OnJoinedRoom);
             client.OnRoomUpdated.AddListener(OnRoomUpdated);
         }
 
-        protected override void OnDestroyed()
+        protected void OnDestroy()
         {
             if (client)
             {
-                client.OnJoinedRoom.RemoveListener(OnJoinedRoom);
+                client.OnPeerAdded.RemoveListener(OnPeerAdded);
                 client.OnPeerRemoved.RemoveListener(OnPeerRemoved);
+                client.OnJoinedRoom.RemoveListener(OnJoinedRoom);
                 client.OnRoomUpdated.RemoveListener(OnRoomUpdated);
             }
-            peerConnectionSource = null;
         }
 
         private void UpdateIceServerCollection (IRoom room)
@@ -153,19 +79,10 @@ namespace Ubiq.Voip
             var iceServersString = room["ice-servers"];
 
             // We're only interested if ice servers has changed
-            if (iceServersString != string.Empty
+            if (iceServersString != null
                 && iceServersString != prevIceServersString)
             {
-                // Allocates, but this shouldn't happen frequently
-                iceServers = JsonUtility.FromJson<IceServerDetailsCollection>(iceServersString);
-
-                peerConnectionSource.ClearIceServers();
-                for (int i = 0; i < iceServers.servers.Count; i++)
-                {
-                    var server = iceServers.servers[i];
-                    peerConnectionSource.AddIceServer(server.uri,server.username,server.password);
-                }
-
+                JsonUtility.FromJsonOverwrite(iceServersString,iceServers);
                 prevIceServersString = iceServersString;
             }
         }
@@ -181,31 +98,38 @@ namespace Ubiq.Voip
         private void OnJoinedRoom(IRoom room)
         {
             UpdateIceServerCollection (room);
+        }
 
-            foreach (var peer in client.Peers)
+        private void OnPeerAdded(IPeer peer)
+        {
+            if (peer.uuid == client.Me.uuid)
             {
-                if (peer.uuid == client.Me.uuid)
+                return; // Don't connect to ones self!
+            }
+
+            if (!peerUuidToConnection.ContainsKey(peer.uuid))
+            {
+                // This is a new Peer. OnPeerAdded will be received by both sides.
+                // All else being equal, the client with the highest UUID is
+                // responsible for initiating the connection.
+
+                if (String.Compare(client.Me.uuid, peer.uuid) > 0) // If my uuid is greater then theirs. This will be inverted on the other side.
                 {
-                    continue; // Don't connect to ones self!
+                    var pcid = NetworkId.Unique(); // A single audio channel exists between two peers. Each audio channel has its own Id.
+
+                    logger.Log("CreatePeerConnectionForPeer", pcid, peer.uuid);
+
+                    CreatePeerConnection(pcid, peer.uuid, true);
+
+                    Message m;
+                    m.type = "RequestPeerConnection";
+                    m.networkId = pcid; // the shared Id is set by this peer, but it must be chosen so as not to conflict with any other shared id on the network
+                    m.uuid = client.Me.uuid; // this is so the other end can identify us if we are removed from the room
+
+                    networkScene.SendJson(NetworkId.Create(peer.networkId, serviceId), m); // Send a message to the Peer's VoipPeerConnectionManager
+
+                    logger.Log("RequestPeerConnection", pcid, peer.uuid);
                 }
-
-                if(peerUuidToConnection.ContainsKey(peer.uuid))
-                {
-                    continue; // This peer existed in the previous room and we already have a connection to it
-                }
-
-                var pcid = NetworkId.Unique(); //A single audio channel exists between two peers. Each audio channel has its own Id.
-
-                logger.Log("CreatePeerConnectionForPeer", pcid, peer.uuid);
-
-                var pc = CreatePeerConnection(pcid, peer.uuid, polite: true);
-
-                Message m;
-                m.type = "RequestPeerConnection";
-                m.objectid = pcid; // the shared Id is set by this peer, but it must be chosen so as not to conflict with any other shared id on the network
-                m.uuid = client.Me.uuid; // this is so the other end can identify us if we are removed from the room
-                SendJson(m);
-                logger.Log("RequestPeerConnection", pcid, peer.uuid);
             }
         }
 
@@ -213,24 +137,19 @@ namespace Ubiq.Voip
         {
             if (peerUuidToConnection.TryGetValue(peer.uuid, out var connection))
             {
-                // Audiosinks are created per connection
-
                 Destroy(connection.gameObject);
                 peerUuidToConnection.Remove(peer.uuid);
             }
         }
 
-        protected override void ProcessMessage(ReferenceCountedSceneGraphMessage message)
+        public void ProcessMessage(ReferenceCountedSceneGraphMessage message)
         {
             var msg = JsonUtility.FromJson<Message>(message.ToString());
             switch (msg.type)
             {
                 case "RequestPeerConnection":
-                    if (!peerUuidToConnection.ContainsKey(msg.uuid))
-                    {
-                        logger.Log("CreatePeerConnectionForRequest", msg.objectid);
-                        var pc = CreatePeerConnection(msg.objectid, msg.uuid, polite: false);
-                    }
+                    logger.Log("CreatePeerConnectionForRequest", msg.networkId);
+                    CreatePeerConnection(msg.networkId, msg.uuid, polite: false);
                     break;
             }
         }
@@ -239,46 +158,17 @@ namespace Ubiq.Voip
         public struct Message
         {
             public string type;
-            public NetworkId objectid;
+            public NetworkId networkId;
             public string uuid;
         }
 
-        private VoipMicrophoneInput CreateAudioSource()
-        {
-            var audioSource = new GameObject("Voip Microphone Input")
-                .AddComponent<VoipMicrophoneInput>();
-
-            audioSource.transform.SetParent(transform);
-            return audioSource;
-        }
-
-        private VoipPeerConnection CreatePeerConnection(NetworkId objectid,
+        private VoipPeerConnection CreatePeerConnection(NetworkId networkId,
             string peerUuid, bool polite)
         {
-            var pc = new GameObject("Voip Peer Connection " + peerUuid)
-                .AddComponent<VoipPeerConnection>();
+            var pc = new GameObject("Voip Peer Connection " + peerUuid).AddComponent<VoipPeerConnection>();
             pc.transform.SetParent(transform);
 
-            // Each network audio sink is a Unity Audio Source. Where sources are created on demand (where none
-            // is specified), there should be one source per peer-connection, so that it can be spatialised.
-
-            var pcSink = defaultAudioSink;
-            if (pcSink == null)
-            {
-                var audioSourceOutputGo = new GameObject("Voip Audio Output + " + peerUuid)
-                    .AddComponent<VoipAudioSourceOutput>();
-
-                // The audiosink can be made 3d and moved around by event listeners
-                // but for now, make it a child to avoid cluttering scene graph
-                audioSourceOutputGo.transform.SetParent(pc.transform);
-                pcSink = audioSourceOutputGo;
-            }
-
-            // The default audio source will always be valid - for now, either the specified source, or the system wide microphone.
-
-            var pcSource = defaultAudioSource;
-
-            pc.Setup(objectid,peerUuid,polite, pcSource, pcSink, peerConnectionSource.Acquire());
+            pc.Setup(networkId,networkScene,peerUuid,polite,iceServers.servers);
 
             peerUuidToConnection.Add(peerUuid, pc);
             OnPeerConnection.Invoke(pc);
@@ -297,7 +187,7 @@ namespace Ubiq.Voip
         {
             OnPeerConnection.AddListener((pc) =>
             {
-                if (pc.PeerUuid == peerUUID)
+                if (pc.peerUuid == peerUUID)
                 {
                     then.Invoke(pc);
                 }
@@ -354,7 +244,7 @@ namespace Ubiq.Voip
         {
             try
             {
-                return NetworkScene.FindNetworkScene(Component).GetComponentInChildren<VoipPeerConnectionManager>();
+                return NetworkScene.Find(Component).GetComponentInChildren<VoipPeerConnectionManager>();
             }
             catch
             {

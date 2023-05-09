@@ -106,7 +106,7 @@ namespace Ubiq.XR
 
                 numsegments++;
 
-                if (Physics.Linecast(positions[i-1], positions[i], out raycasthitinfo))
+                if (Physics.Linecast(positions[i-1], positions[i], out raycasthitinfo, Physics.DefaultRaycastLayers))
                 {
                     if (raycasthitinfo.collider.CompareTag("Teleport"))
                     {
@@ -115,8 +115,12 @@ namespace Ubiq.XR
                         teleportLocationValid = true;
                         break;
                     }
+                    else {
+                        teleportLocationValid = false;
+                        renderer.sharedMaterial.color = collisionColour;
+                        break;
+                    }
 
-                    renderer.sharedMaterial.color = collisionColour;
                 }
             }
 

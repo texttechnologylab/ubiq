@@ -39,11 +39,12 @@ namespace Ubiq.Rooms
             public string joincode;
             public bool publish;
             public string name;
+            public int peerAmount;
             public List<string> keys = new List<string>();
             public List<string> values = new List<string>();
         }
 
-#region Send to Server
+        #region Send to Server
         [Serializable]
         private class JoinArgs
         {
@@ -90,13 +91,19 @@ namespace Ubiq.Rooms
         }
 
         [Serializable]
+        public class DeleteRoomRequest
+        {
+            public NetworkId clientid;
+        }
+
+        [Serializable]
         private struct PingArgs
         {
             public NetworkId clientid;
         }
-#endregion
+        #endregion
 
-#region Recv from Server
+        #region Recv from Server
         [Serializable]
         private class RejectedArgs
         {
@@ -232,12 +239,6 @@ namespace Ubiq.Rooms
         [SerializeField]
         private ConnectionDefinition[] servers;
 
-        /// <summary>
-        /// The version the client defines which message schema it supports. Servers must match that schema
-        /// in order to be able to communicate with it.
-        /// </summary>
-        private const string roomClientVersion = "0.0.4";
-
         private NetworkId roomServerObjectId = new NetworkId(1);
         private Dictionary<string, Action<string>> blobCallbacks = new Dictionary<string, Action<string>>();
         private float pingSent;
@@ -317,6 +318,7 @@ namespace Ubiq.Rooms
         {
             public string Name { get; protected set; }
             public string UUID { get; protected set; }
+            public int PeerAmount { get; protected set; }
             public string JoinCode { get; protected set; }
             public bool Publish { get; protected set; }
             public string this[string key]
@@ -339,6 +341,7 @@ namespace Ubiq.Rooms
             {
                 Name = info.name;
                 UUID = info.uuid;
+                PeerAmount = info.peerAmount;
                 JoinCode = info.joincode;
                 Publish = info.publish;
                 properties.Set(info.keys,info.values);
@@ -422,9 +425,9 @@ namespace Ubiq.Rooms
             {
                 new ConnectionDefinition()
                 {
-                    send_to_ip = "",
-                    send_to_port = "",
-                    type = ConnectionType.tcp_client
+                    sendToIp = "",
+                    sendToPort = "",
+                    type = ConnectionType.TcpClient
                 }
             };
         }
@@ -445,7 +448,7 @@ namespace Ubiq.Rooms
 
         protected void Start()
         {
-            scene = NetworkScene.FindNetworkScene(this);
+            scene = NetworkScene.Find(this);
             me.networkId = scene.Id;
             objectid = NetworkId.Create(scene.Id, "RoomClient");
             scene.AddProcessor(objectid, ProcessMessage);
@@ -477,52 +480,7 @@ namespace Ubiq.Rooms
                     {
                         var args = JsonUtility.FromJson<SetRoomArgs>(container.args);
                         room.Set(args.room);
-
-                        var newPeerUuids = args.peers.Select(x => x.uuid);
-                        var peersToRemove = new List<string>();
-
-                        // Remove existing peers that are not in the current room
-                        foreach (var existingPeer in peers.Keys)
-                        {
-                            if (!newPeerUuids.Contains(existingPeer))
-                            {
-                                peersToRemove.Add(existingPeer);
-                            }
-                        }
-                        foreach (var uuid in peersToRemove)
-                        {
-                            var peer = peers[uuid];
-                            peers.Remove(uuid);
-                            OnPeerRemoved.Invoke(peer);
-                        }
-
-                        // Potentially update properties for existing peers
-                        foreach (var newPeer in args.peers)
-                        {
-                            if (peers.TryGetValue(newPeer.uuid,out var peer) &&
-                                peer.properties.Set(newPeer.keys,newPeer.values))
-                            {
-                                OnPeerUpdated.Invoke(peer);
-                            }
-                        }
-
-                        // Add room peers which are not yet existing peers
-                        foreach (var newPeer in args.peers)
-                        {
-                            if (newPeer.uuid == me.uuid)
-                            {
-                                continue;
-                            }
-
-                            if (!peers.ContainsKey(newPeer.uuid))
-                            {
-                                var peer = new PeerInterfaceFriend(newPeer);
-                                peers.Add(newPeer.uuid,peer);
-                                OnPeerAdded.Invoke(peer);
-                                OnPeerUpdated.Invoke(peer);
-                            }
-                        }
-
+                        Me["ubiq.rooms.roomid"] = room.UUID; // Updates where this Peer thinks its a member of for the sake of other peers. Local Components should use the Room member.
                         OnJoinedRoom.Invoke(room);
                         OnRoomUpdated.Invoke(room);
                     }
@@ -530,10 +488,6 @@ namespace Ubiq.Rooms
                 case "Rooms":
                     {
                         var args = JsonUtility.FromJson<RoomsArgs>(container.args);
-                        if (roomClientVersion != args.version)
-                        {
-                            Debug.LogError($"Your version {roomClientVersion} of Ubiq doesn't match the server version {args.version}.");
-                        }
                         var rooms = new List<IRoom>();
                         for (int i = 0; i < args.rooms.Count; i++)
                         {
@@ -545,7 +499,7 @@ namespace Ubiq.Rooms
                         var request = new RoomsDiscoveredRequest();
                         request.joincode = args.request.joincode;
 
-                        OnRooms.Invoke(rooms,request);
+                        OnRooms.Invoke(rooms, request);
                     }
                     break;
                 case "PeerAdded":
@@ -610,9 +564,22 @@ namespace Ubiq.Rooms
             }
         }
 
-        private void SendToServer(string type, object argument)
+        private void SendToServerSync(string type, object argument)
         {
-            scene.SendJson(roomServerObjectId, new Message(type, argument));
+            SendToServerSync(new Message(type, argument));
+        }
+
+        private void SendToServerSync(Message message)
+        {
+            scene.SendJson(roomServerObjectId, message);
+        }
+
+        public void SendToServer(Message message)
+        {
+            actions.Add(() =>
+            {
+                SendToServerSync(message);
+            });
         }
 
         /// <summary>
@@ -624,7 +591,7 @@ namespace Ubiq.Rooms
         {
             actions.Add(() =>
             {
-                SendToServer("Join", new JoinArgs()
+                SendToServerSync("Join", new JoinArgs()
                 {
                     name = name,
                     publish = publish,
@@ -641,7 +608,7 @@ namespace Ubiq.Rooms
         {
             actions.Add(() =>
             {
-                SendToServer("Join", new JoinArgs()
+                SendToServerSync("Join", new JoinArgs()
                 {
                     joincode = joincode,
                     peer = me.GetPeerInfo()
@@ -657,7 +624,7 @@ namespace Ubiq.Rooms
         {
             actions.Add(() =>
             {
-                SendToServer("Join", new JoinArgs()
+                SendToServerSync("Join", new JoinArgs()
                 {
                     uuid = guid.ToString(),
                     peer = me.GetPeerInfo()
@@ -692,7 +659,7 @@ namespace Ubiq.Rooms
                     _appendPeerPropertiesArgs.values.Add(value);
                 }
 
-                SendToServer("AppendPeerProperties", _appendPeerPropertiesArgs);
+                SendToServerSync("AppendPeerProperties", _appendPeerPropertiesArgs);
                 OnPeerUpdated.Invoke(me);
             }
 
@@ -706,7 +673,7 @@ namespace Ubiq.Rooms
                     _appendRoomPropertiesArgs.values.Add(value);
                 }
 
-                SendToServer("AppendRoomProperties", _appendRoomPropertiesArgs);
+                SendToServerSync("AppendRoomProperties", _appendRoomPropertiesArgs);
             }
 
             if (heartbeatSent > HeartbeatInterval)
@@ -732,7 +699,7 @@ namespace Ubiq.Rooms
                 var args = new DiscoverRoomsArgs();
                 args.clientid = objectid;
                 args.joincode = joincode;
-                SendToServer("DiscoverRooms", args);
+                SendToServerSync("DiscoverRooms", args);
             });
         }
 
@@ -760,14 +727,14 @@ namespace Ubiq.Rooms
                 networkId = objectid,
                 blob = blob
             };
-            SendToServer("GetBlob", request);
+            SendToServerSync("GetBlob", request);
         }
 
         private void SetBlob(string room, string uuid, string blob) // private because this could encourage re-using uuids, which is not allowed because blobs are meant to be immutable
         {
             if (blob.Length > 0)
             {
-                SendToServer("SetBlob", new SetBlobRequest()
+                SendToServerSync("SetBlob", new SetBlobRequest()
                 {
                     blob = new Blob()
                     {
@@ -779,7 +746,7 @@ namespace Ubiq.Rooms
 
             }
         }
-
+        
         /// <summary>
         /// Sets a persistent variable that exists for as long as the room does. This variable is not sent with
         /// Room Updates, but rather only when requested, making this method suitable for larger data.
@@ -792,10 +759,18 @@ namespace Ubiq.Rooms
             return uuid;
         }
 
+        public void DeleteRoom()
+        {
+            SendToServerSync("DisconnectAll", new DeleteRoomRequest()
+            {
+                clientid = objectid,
+            });
+        }
+
         public void Ping()
         {
             pingSent = Time.realtimeSinceStartup;
-            SendToServer("Ping", new PingArgs() { clientid = objectid });
+            SendToServerSync("Ping", new PingArgs() { clientid = objectid });
         }
 
         private void OnPingResponse(PingResponseArgs args)
@@ -821,7 +796,7 @@ namespace Ubiq.Rooms
 
         public static RoomClient Find(MonoBehaviour Component)
         {
-            return NetworkScene.FindNetworkScene(Component).GetComponent<RoomClient>();
+            return NetworkScene.Find(Component).GetComponent<RoomClient>();
         }
     }
 }

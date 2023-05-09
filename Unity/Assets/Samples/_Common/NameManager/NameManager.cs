@@ -18,12 +18,7 @@ namespace Ubiq.Samples.Social
         public List<WrappedList> nameComponents;
         public string delimiter = " ";
 
-        private RoomClient roomClient;
-
-        private void Awake()
-        {
-            roomClient = GetComponentInParent<RoomClient>();
-        }
+        public RoomClient roomClient;
 
         private void Start()
         {

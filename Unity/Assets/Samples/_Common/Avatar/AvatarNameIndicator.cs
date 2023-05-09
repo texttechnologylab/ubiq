@@ -12,10 +12,9 @@ namespace Ubiq.Samples
     {
         private Text text;
         private Avatars.Avatar avatar;
-        private SocialMenu socialMenu;
 
         private void Awake()
-        {
+        { 
             text = GetComponent<Text>();
         }
 
@@ -29,17 +28,7 @@ namespace Ubiq.Samples
                 return;
             }
 
-            socialMenu = GetComponentInParent<NetworkScene>()?.
-                GetComponentInChildren<SocialMenu>();
-
-            if (socialMenu == null || !socialMenu)
-            {
-                text.enabled = false;
-                return;
-            }
-
             avatar.OnPeerUpdated.AddListener(Avatar_OnPeerUpdated);
-            socialMenu.OnStateChange.AddListener(SocialMenu_OnStateChange);
         }
 
         private void OnDestroy()
@@ -48,24 +37,14 @@ namespace Ubiq.Samples
             {
                 avatar.OnPeerUpdated.RemoveListener(Avatar_OnPeerUpdated);
             }
-
-            if (socialMenu)
-            {
-                socialMenu.OnStateChange.RemoveListener(SocialMenu_OnStateChange);
-            }
         }
 
         private void Avatar_OnPeerUpdated (IPeer peer)
         {
             UpdateName();
         }
-
-        private void SocialMenu_OnStateChange(SocialMenu menu, SocialMenu.State state)
-        {
-            text.enabled = state == SocialMenu.State.Open;
-        }
-
-        private void UpdateName()
+        
+         private void UpdateName()
         {
             text.text = avatar.Peer["ubiq.samples.social.name"] ?? "(unnamed)";
         }

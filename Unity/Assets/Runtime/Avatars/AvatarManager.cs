@@ -7,7 +7,7 @@ using Ubiq.Spawning;
 using Ubiq.Voip;
 using UnityEngine;
 using UnityEngine.Events;
-
+using System.Linq;
 namespace Ubiq.Avatars
 {
     /// <summary>
@@ -19,6 +19,7 @@ namespace Ubiq.Avatars
     {
         public PrefabCatalogue avatarCatalogue;
         public GameObject avatarPrefab;
+        public AvatarHints hints;
 
         /// <summary>
         /// The current avatar loaded for the local player. Be aware that this reference may change at any time
@@ -70,8 +71,8 @@ namespace Ubiq.Avatars
 
         private void Start()
         {
-            spawner = new NetworkSpawner(NetworkScene.FindNetworkScene(this),
-                RoomClient,avatarCatalogue,"ubiq.avatars.");
+            spawner = new NetworkSpawner(NetworkScene.Find(this),
+                RoomClient, avatarCatalogue, "ubiq.avatars.");
             spawner.OnSpawned += OnSpawned;
             spawner.OnDespawned += OnDespawned;
 
@@ -83,11 +84,13 @@ namespace Ubiq.Avatars
         private void OnDestroy()
         {
             RoomClient.OnPeerUpdated.RemoveListener(OnPeerUpdated);
-
-            spawner.OnSpawned -= OnSpawned;
-            spawner.OnDespawned -= OnDespawned;
-            spawner.Dispose();
-            spawner = null;
+            if (spawner != null)
+            {
+                spawner.OnSpawned -= OnSpawned;
+                spawner.OnDespawned -= OnDespawned;
+                spawner.Dispose();
+                spawner = null;
+            }
         }
 
         private void OnSpawned(GameObject gameObject, IRoom room,
@@ -95,7 +98,10 @@ namespace Ubiq.Avatars
         {
             var avatar = gameObject.GetComponentInChildren<Avatar>();
             avatar.SetPeer(peer);
-            playerAvatars.Add(peer,avatar);
+            if (playerAvatars.ContainsKey(peer))
+                playerAvatars[peer] = avatar;
+            else
+                playerAvatars.Add(peer, avatar);
 
             if (peer == RoomClient.Me)
             {
@@ -107,6 +113,7 @@ namespace Ubiq.Avatars
                     gameObject.transform.localRotation = LocalAvatar.transform.localRotation;
                 }
                 avatar.IsLocal = true;
+                avatar.SetHints(hints);
                 gameObject.name = $"My Avatar #{ peer.uuid }";
 
                 LocalAvatar = avatar;
@@ -129,7 +136,7 @@ namespace Ubiq.Avatars
             playerAvatars.Remove(avatar.Peer);
         }
 
-        private void UpdateLocalAvatar()
+        public void UpdateLocalAvatar()
         {
             // If we have an existing instance, but it is the wrong prefab, destroy it so we can start again
             if (spawnedPrefab && spawnedPrefab != avatarPrefab)
@@ -146,7 +153,6 @@ namespace Ubiq.Avatars
             {
                 return;
             }
-
             // Create an instance of the correct prefab for this avatar
             if (!spawnedPrefab)
             {
@@ -155,6 +161,7 @@ namespace Ubiq.Avatars
                 spawnedPrefab = avatarPrefab;
             }
         }
+
 
         private void OnPeerUpdated(IPeer peer)
         {
@@ -169,13 +176,27 @@ namespace Ubiq.Avatars
         /// </summary>
         public static AvatarManager Find(MonoBehaviour Component)
         {
-            var scene = NetworkScene.FindNetworkScene(Component);
+            var scene = NetworkScene.Find(Component);
             if (scene)
             {
                 return scene.GetComponentInChildren<AvatarManager>();
             }
             return null;
         }
-    }
 
+        /// <summary>
+        /// Finds the first avatar (if any) associated with the Peer
+        /// </summary>
+        public Avatar FindAvatar(IPeer Peer)
+        {
+            if (playerAvatars.ContainsKey(Peer))
+            {
+                return playerAvatars[Peer];
+            }
+            else
+            {
+                return null;
+            }
+        }
+    }
 }

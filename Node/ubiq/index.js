@@ -9,7 +9,7 @@
 // build NodeJs based (Client) Peers.
 
 const { 
-    WrappedWebSocketServer,
+    WrappedSecureWebSocketServer,
     WrappedTcpServer,
     WebSocketConnectionWrapper,
     TcpConnectionWrapper,
@@ -34,31 +34,16 @@ const {
     NetworkScene
 } = require("./networkscene");
 
-const {
-    SerialisedDictionary
-} = require("./dictionary");
-
-const{
-    RoomClient
-} = require("./roomclient");
-
-const{
-    LogCollector
-} = require("./logcollector");
-
 module.exports = {
     WebSocketConnectionWrapper,
-    WrappedWebSocketServer,
+    WrappedSecureWebSocketServer,
     TcpConnectionWrapper,
     WrappedTcpServer,
     Message,
     NetworkId,
     NetworkContext,
     NetworkScene,
-    RoomClient,
-    LogCollector,
     Schema,
-    SerialisedDictionary,
     Uuid,
     UbiqTcpConnection    
 }

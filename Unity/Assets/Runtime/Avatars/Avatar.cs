@@ -6,6 +6,8 @@ using Ubiq.Messaging;
 using UnityEngine.Events;
 using Ubiq.Rooms;
 using Ubiq.Dictionaries;
+using Ubiq.Spawning;
+using UnityEngine.SocialPlatforms;
 
 namespace Ubiq.Avatars
 {
@@ -14,14 +16,19 @@ namespace Ubiq.Avatars
     /// Components can either subclass this type, or be instantiated next to it, to support
     /// their custom behaviours.
     /// </summary>
-    public class Avatar : MonoBehaviour
+    public class Avatar : MonoBehaviour, INetworkSpawnable
     {
+        /// <summary>
+        /// The NetworkId set by the Spawner when this Avatar is created.
+        /// </summary>
+        public NetworkId NetworkId { get; set; }
+
         /// <summary>
         /// Whether the Avatar instance represents a local or remote player. This flag is nominal only; child components do not have to use it.
         /// </summary>
         [NonSerialized]
-        public bool IsLocal;
-
+        protected bool isLocal;
+        public virtual bool IsLocal { get => isLocal; set => isLocal = value; }
         /// <summary>
         /// The Peer that the Avatar represents. Not all Avatar instances necessarily represent live peers - Avatars may be created to implement
         /// customisation interfaces, NPCs & crowds, or playback, for example.
@@ -32,6 +39,7 @@ namespace Ubiq.Avatars
         /// Peer is set externally (using SetPeer()). This must be done as soon as the Avatar is created.
         /// </remarks>
         public IPeer Peer { get; private set; }
+        public AvatarHints hints { get; private set; }
 
         /// <summary>
         /// Emitted when the properties of the Peer this Avatar belongs to are updated.
@@ -42,6 +50,12 @@ namespace Ubiq.Avatars
         /// The Update Rate (in Hz) that Components should use. This is suggested only and some Components may decide they need a higher rate.
         /// </summary>
         public int UpdateRate = 60;
+
+
+        // These properties should be set by whatever Component controls the avatar.
+        public Vector3 Position { get; set; }
+        public Vector3 Velocity { get; set; }
+        public Quaternion Rotation { get; set; }
 
         /// <summary>
         /// A dummy PeerInterface for local properties.
@@ -88,11 +102,19 @@ namespace Ubiq.Avatars
             }
         }
 
+        public void SetHints(AvatarHints hints)
+        {
+            this.hints = hints;
+        }
+
         private bool hasStarted = false;
 
         private void Start()
         {
             hasStarted = true;
         }
+
+        private Vector3 previousPosition;
+        private Quaternion previousRotation;
     }
 }

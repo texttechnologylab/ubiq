@@ -31,6 +31,7 @@ namespace Ubiq.XR
                 if (used != null)
                 {
                     used.UnUse(hand);
+                    UseableObjectUser.onUnUse.Invoke(hand, used as MonoBehaviour);
                     used = null;
                 }
             }
@@ -53,6 +54,7 @@ namespace Ubiq.XR
                 if (used != null)
                 {
                     Debug.Log("Using " + hit.collider.gameObject.name);
+                    UseableObjectUser.onUse.Invoke(hand, used as MonoBehaviour);
                     used.Use(hand);
                 }
             }

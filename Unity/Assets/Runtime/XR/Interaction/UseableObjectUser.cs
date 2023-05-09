@@ -1,15 +1,19 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 namespace Ubiq.XR
 {
+    public delegate void OnUse(Hand controller, MonoBehaviour go);
+    public delegate void OnUnUse(Hand controller, MonoBehaviour go);
     public class UseableObjectUser : MonoBehaviour
     {
         public HandController controller;
 
         public List<Collider> contacted;
         public List<IUseable> used;
-
+        public static OnUse onUse = delegate {};
+        public static OnUnUse onUnUse = delegate {};
 
         private void Awake()
         {
@@ -44,6 +48,7 @@ namespace Ubiq.XR
                         {
                             var useable = (component as IUseable);
                             useable.Use(controller);
+                            onUse.Invoke(controller, component);
                             used.Add(useable);
                         }
                     }
@@ -61,6 +66,7 @@ namespace Ubiq.XR
                     }
 
                     item.UnUse(controller);
+                    onUse.Invoke(controller, item as MonoBehaviour);
                 }
                 used.Clear();
             }
