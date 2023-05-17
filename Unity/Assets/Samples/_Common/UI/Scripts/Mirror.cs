@@ -232,6 +232,7 @@ namespace Ubiq.Samples.Social
             if (!renderTexture && width > 0 && height > 0)
             {
                 renderTexture = RenderTexture.GetTemporary(width,height,0);
+                renderTexture.depth = 32;
             }
             return renderTexture;
         }
