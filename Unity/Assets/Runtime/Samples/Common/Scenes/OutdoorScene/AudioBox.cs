@@ -15,7 +15,7 @@ public class AudioBox : MonoBehaviour, IUseable, IGraspable
         body = GetComponent<Rigidbody>();
     }
 
-    public void Grasp(Hand controller, Collider collider)
+    public void Grasp(Hand controller)
     {
         follow = controller;
     }
