@@ -81,6 +81,11 @@ namespace Ubiq.Avatars
             UpdateLocalAvatar();
         }
 
+        private void Update()
+        {
+            UpdateLocalAvatar();
+        }
+
         private void OnDestroy()
         {
             RoomClient.OnPeerUpdated.RemoveListener(OnPeerUpdated);
@@ -98,10 +103,7 @@ namespace Ubiq.Avatars
         {
             var avatar = gameObject.GetComponentInChildren<Avatar>();
             avatar.SetPeer(peer);
-            if (playerAvatars.ContainsKey(peer))
-                playerAvatars[peer] = avatar;
-            else
-                playerAvatars.Add(peer, avatar);
+            playerAvatars[peer] = avatar;
 
             if (peer == RoomClient.Me)
             {

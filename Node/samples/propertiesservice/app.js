@@ -1,17 +1,20 @@
 // The PropertiesService sample demonstrates how to use the Peer and Room
 // properties procedurally.
-// This application creates a process that joins a room.
-// It uses the RoomClient class to set properties in both the Peer and the
-// Room. It will also respond to specific properties set on other Peers.
+// This application creates a process that joins a room, and listens for changes
+// to a specific Property - "propertiesservicekey" - on all Peers in the Room.
 
-const { NetworkScene, UbiqTcpConnection } = require("../../ubiq");
-const { RoomClient } = require("../../components");
+import { NetworkScene, UbiqTcpConnection } from 'ubiq'
+import { RoomClient } from 'components';
+import nconf from 'nconf'
 
-// Configuration
-roomGuid = "6765c52b-3ad6-4fb0-9030-2c9a05dc4731";
+// This sample must be started from the root of the Node directory. I.e.,
+// > node --loader ts-node/esm samples/propertiesservice/app.js
+
+nconf.file('default', "config/samples.json")
+const config = nconf.get()
 
 // Create a connection to a Server
-const connection = UbiqTcpConnection("nexus.cs.ucl.ac.uk", 8009);
+const connection = UbiqTcpConnection(config.tcp.uri, config.tcp.port);
 
 // A NetworkScene
 const scene = new NetworkScene();
@@ -36,4 +39,4 @@ roomclient.addListener("OnPeerUpdated", peer =>{
     }
 })
 
-roomclient.join(roomGuid);
+roomclient.join(config.room);

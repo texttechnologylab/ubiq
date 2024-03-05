@@ -11,16 +11,22 @@
 // has left the room.
 
 // Import Ubiq types
-const { NetworkScene, UbiqTcpConnection } = require("../../ubiq");
-const { LogCollector, RoomClient } = require("../../components");
-const fs = require('fs');
+import { NetworkScene, UbiqTcpConnection } from 'ubiq'
+import { LogCollector, RoomClient } from 'components'
+import nconf from 'nconf'
+import fs from 'fs'
+
+// This sample must be started from the root of the Node directory. I.e.,
+// > node --loader ts-node/esm samples/logcollectorservice/app.js
+
+nconf.file('default', "config/samples.json")
+const config = nconf.get()
 
 // Configuration
-eventType = 2;
-roomGuid = "6765c52b-3ad6-4fb0-9030-2c9a05dc4731";
+const eventType = 2;
 
 // Create a connection to a Server
-const connection = UbiqTcpConnection("nexus.cs.ucl.ac.uk", 8009);
+const connection = UbiqTcpConnection(config.tcp.uri, config.tcp.port);
 
 // A NetworkScene
 const scene = new NetworkScene();
@@ -44,7 +50,7 @@ function writeEventToPeerFile(peer, message){
 }
 
 function closePeerFile(peer){
-    if(files.hasOwnProperty(peer)){
+    if(files.hasOwnProperty(peer.sceneid)){
         delete files[peer];
     }
 }
@@ -64,7 +70,7 @@ roomclient.addListener("OnPeerRemoved", peer =>{
 // Register for log events from the log collector.
 logcollector.addListener("OnLogMessage", (type,message) => {
     if(type == eventType){ // Experiment
-        peer = message.peer; // All log messages include the emitting peer
+        const peer = message.peer; // All log messages include the emitting peer
         writeEventToPeerFile(peer,message);
     }
 });
@@ -79,4 +85,4 @@ logcollector.lockCollection();
 
 // Join by UUID. Use an online generator to create a new one for your 
 // experiment.
-roomclient.join(roomGuid); 
+roomclient.join(config.room); 
